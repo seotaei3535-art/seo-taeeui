@@ -1,0 +1,79 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "photos": {
+      ".read": "query.orderByKey == true && query.limitToLast != null && query.limitToLast <= 7",
+      "$id": {
+        ".write": "auth != null && auth.uid === 'U5RuF43yaNOPntjbHsUa6FKDrs72'",
+        ".validate": "newData.hasChildren(['caption','width','height','bytes','createdAt'])",
+        "caption": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+        },
+        "width": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 960"
+        },
+        "height": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 960"
+        },
+        "bytes": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 81920"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "photoData": {
+      "$id": {
+        ".read": true,
+        ".write": "auth != null && auth.uid === 'U5RuF43yaNOPntjbHsUa6FKDrs72'",
+        ".validate": "newData.isString() && newData.val().length <= 109251 && newData.val().matches(/^data:image\\/webp;base64,[A-Za-z0-9+\\/=]+$/)"
+      }
+    },
+    "questions": {
+      ".read": "query.orderByKey == true && query.limitToLast != null && query.limitToLast <= 7",
+      "$id": {
+        ".write": "auth != null && (auth.uid === 'U5RuF43yaNOPntjbHsUa6FKDrs72' || (!data.exists() && newData.exists() && newData.child('uid').val() === auth.uid && (!root.child('limits').child(auth.uid).exists() || root.child('limits').child(auth.uid).child('at').val() <= now - 60000) && newData.parent().parent().child('limits').child(auth.uid).child('at').val() === now && newData.parent().parent().child('limits').child(auth.uid).child('questionId').val() === $id))",
+        ".validate": "newData.hasChildren(['name','question','uid','createdAt'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
+        },
+        "question": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000"
+        },
+        "uid": {
+          ".validate": "newData.isString() && newData.val().length <= 128 && (auth.uid === 'U5RuF43yaNOPntjbHsUa6FKDrs72' || newData.val() === auth.uid)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === now) || (data.exists() && newData.val() === data.val()))"
+        },
+        "answer": {
+          ".validate": "auth.uid === 'U5RuF43yaNOPntjbHsUa6FKDrs72' && newData.isString() && newData.val().length > 0 && newData.val().length <= 2000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "limits": {
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid && newData.exists() && (!data.exists() || data.child('at').val() <= now - 60000)",
+        "$other": {
+          ".validate": false
+        },
+        ".validate": "newData.hasChildren(['at','questionId'])",
+        "at": {
+          ".validate": "newData.isNumber() && newData.val() === now"
+        },
+        "questionId": {
+          ".validate": "newData.isString() && newData.val().matches(/^[0-9]{13}_[a-f0-9]{32}$/)"
+        }
+      }
+    }
+  }
+}
+
