@@ -16,7 +16,6 @@ const groups=[
 {id:"english",n:"04",title:"영어 · 언어교환",desc:"작은 대화부터, 영어를 일상으로.",links:[
 ["HelloTalk","언어교환 파트너와 채팅·음성 대화, 문장 교정","https://www.hellotalk.com/","언어교환"],
 ["Tandem","언어와 관심사로 파트너 찾기, 채팅·음성·영상 대화","https://tandem.net/","언어교환"],
-["Duolingo","짧은 레슨으로 매일 영어 단어·문장 연습","https://www.duolingo.com/","영어학습"],
 ["British Council LearnEnglish","듣기·읽기·문법을 수준별로 공부하기","https://learnenglish.britishcouncil.org/","영어학습"]]}
 ];
 const external='target="_blank" rel="noopener noreferrer"';
@@ -30,39 +29,9 @@ const countries=[
 ["FR","프랑스","프랑스어","https://whic.mofa.go.kr/whic/nation/info.jsp?boardNo=100011"]];
 document.querySelector("#countries").innerHTML=countries.map(([code,name,language,url])=>`<a class="country" href="${url}" ${external}><span class="code">${code}</span><div><strong>${name}</strong><small>${language} · 공식 안내</small></div></a>`).join("");
 const zones=[
-["한국 · 서울","Asia/Seoul","kr","KRW"],["호주 · 시드니","Australia/Sydney","au","AUD"],["호주 · 퍼스","Australia/Perth","au","AUD"],["캐나다 · 밴쿠버","America/Vancouver","ca","CAD"],
-["캐나다 · 토론토","America/Toronto","ca","CAD"],["뉴질랜드 · 오클랜드","Pacific/Auckland","nz","NZD"],["영국 · 런던","Europe/London","gb","GBP"],["아일랜드 · 더블린","Europe/Dublin","ie","EUR"],
-["일본 · 도쿄","Asia/Tokyo","jp","JPY"],["독일 · 베를린","Europe/Berlin","de","EUR"],["프랑스 · 파리","Europe/Paris","fr","EUR"],["미국 · 뉴욕","America/New_York","us","USD"]];
-let rateData=null;
-let rateState="loading";
+["한국 · 서울","Asia/Seoul"],["호주 · 시드니","Australia/Sydney"],["호주 · 퍼스","Australia/Perth"],["캐나다 · 밴쿠버","America/Vancouver"],
+["캐나다 · 토론토","America/Toronto"],["뉴질랜드 · 오클랜드","Pacific/Auckland"],["영국 · 런던","Europe/London"],["아일랜드 · 더블린","Europe/Dublin"],
+["일본 · 도쿄","Asia/Tokyo"],["독일 · 베를린","Europe/Berlin"],["프랑스 · 파리","Europe/Paris"],["미국 · 뉴욕","America/New_York"]];
 function offset(zone,now){const p=new Intl.DateTimeFormat("en-GB",{timeZone:zone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(now);const o=Object.fromEntries(p.map(x=>[x.type,x.value]));return (Date.UTC(+o.year,+o.month-1,+o.day,+o.hour,+o.minute,+o.second)-Math.floor(now.getTime()/1000)*1000)/3600000;}
-function validRates(data){return data?.result==="success"&&data.base_code==="KRW"&&Number.isFinite(data.time_last_update_unix)&&data.time_last_update_unix>0&&["AUD","CAD","NZD","GBP","EUR","JPY","USD"].every(c=>Number.isFinite(data.rates?.[c])&&data.rates[c]>0);}
-function exchangeText(currency){
- if(currency==="KRW")return "기준 통화 · 대한민국 원";
- if(!rateData)return rateState==="loading"?"환율 불러오는 중…":"환율을 불러오지 못했어요";
- const units=currency==="JPY"?100:1;
- const won=units/rateData.rates[currency];
- return units+" "+currency+" ≈ "+new Intl.NumberFormat("ko-KR",{maximumFractionDigits:2}).format(won)+"원";
-}
-function updateClocks(){const now=new Date();document.querySelector("#clocks").innerHTML=zones.map(([city,zone,flag,currency],i)=>{const d=Math.round((offset(zone,now)-offset("Asia/Seoul",now))*100)/100;return `<div class="clock ${i===0?"home":""}"><div class="city"><img class="flag" src="https://flagcdn.com/w40/${flag}.png" width="24" height="18" alt="${city.split(" · ")[0]} 국기" loading="lazy"> <span>${city}</span></div><div class="time">${new Intl.DateTimeFormat("ko-KR",{timeZone:zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(now)}</div><div class="date">${new Intl.DateTimeFormat("ko-KR",{timeZone:zone,month:"long",day:"numeric",weekday:"short"}).format(now)}</div><div class="diff">${i===0?"한국 기준":d===0?"한국과 같은 시간":`한국보다 ${Math.abs(d)}시간 ${d>0?"빠름":"느림"}`}</div><div class="exchange">${exchangeText(currency)}</div></div>`;}).join("");}
-function updateRateNote(){
- const status=document.querySelector("#rate-status");
- if(rateData){const time=new Intl.DateTimeFormat("ko-KR",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date(rateData.time_last_update_unix*1000));status.textContent="환율 기준: "+time+" (한국시간)"+(rateState==="cached"?" · 최근 저장값":"")+(Date.now()/1000-rateData.time_last_update_unix>172800?" · 오래된 정보":"");}
- else status.textContent=rateState==="loading"?"환율 정보를 불러오고 있어요.":"환율 연결이 원활하지 않아요. 잠시 후 페이지를 새로고침해주세요.";
-}
-async function loadRates(){
- let cached=null;
- try{cached=JSON.parse(localStorage.getItem("moa-exchange-krw-v1"));}catch{}
- if(validRates(cached?.data)){rateData=cached.data;rateState="cached";updateClocks();updateRateNote();if(Date.now()-cached.savedAt<86400000)return;}
- const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),12000);
- try{
-  const response=await fetch("https://open.er-api.com/v6/latest/KRW",{signal:controller.signal});
-  if(!response.ok)throw new Error("환율 응답 오류");
-  const data=await response.json();
-  if(!validRates(data))throw new Error("환율 정보 오류");
-  rateData=data;rateState="ready";
-  try{localStorage.setItem("moa-exchange-krw-v1",JSON.stringify({savedAt:Date.now(),data}));}catch{}
- }catch{rateState=rateData?"cached":"error";}
- finally{clearTimeout(timeout);updateClocks();updateRateNote();}
-}
-updateClocks();updateRateNote();loadRates();setInterval(updateClocks,30000);
+function updateClocks(){const now=new Date();document.querySelector("#clocks").innerHTML=zones.map(([city,zone],i)=>{const d=Math.round((offset(zone,now)-offset("Asia/Seoul",now))*100)/100;return `<div class="clock ${i===0?"home":""}"><div class="city">${city}</div><div class="time">${new Intl.DateTimeFormat("ko-KR",{timeZone:zone,hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(now)}</div><div class="date">${new Intl.DateTimeFormat("ko-KR",{timeZone:zone,month:"long",day:"numeric",weekday:"short"}).format(now)}</div><div class="diff">${i===0?"한국 기준":d===0?"한국과 같은 시간":`한국보다 ${Math.abs(d)}시간 ${d>0?"빠름":"느림"}`}</div></div>`;}).join("");}
+updateClocks();setInterval(updateClocks,30000);
